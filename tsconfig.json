@@ -115,6 +115,6 @@
   ],
   "exclude": [
     "node_modules", // 除外するディレクトリ
-    "src/classes.ts"
+    "src/dump/*.ts"
   ]
 }
