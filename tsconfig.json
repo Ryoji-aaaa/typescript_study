@@ -114,6 +114,7 @@
     "src/*.ts" // コンパイルする TypeScript ファイルのパス
   ],
   "exclude": [
-    "node_modules" // 除外するディレクトリ
+    "node_modules", // 除外するディレクトリ
+    "src/classes.ts"
   ]
 }
