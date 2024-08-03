@@ -8,15 +8,20 @@ function Logger(logString: string) {
 
 function WithTemplate(template: string, hookid: string) {
   console.log("TEMPLATE FACTORY");
-  return function (constructor: any) {
-    document.addEventListener("DOMContentLoaded", () => {
-      const hookEl = document.getElementById(hookid);
-      const p = new constructor();
-      if (hookEl) {
-        hookEl.innerHTML = template;
-        hookEl.querySelector("h1")!.textContent = p.name;
+  return function <T extends { new (...args: any[]): { name: string } }>(
+    originalConstructor: T
+  ) {
+    return class extends originalConstructor {
+      constructor(..._: any[]) {
+        super();
+        console.log("Rendering template");
+        const hookEl = document.getElementById(hookid);
+        if (hookEl) {
+          hookEl.innerHTML = template;
+          hookEl.querySelector("h1")!.textContent = this.name;
+        }
       }
-    });
+    };
   };
 }
 
@@ -30,8 +35,8 @@ class Person {
   }
 }
 
-const pers = new Person();
-console.log(pers);
+// const pers = new Person();
+// console.log(pers);
 
 function Log(target: any, propertyName: string | Symbol) {
   console.log("Property decorator!");
@@ -84,6 +89,100 @@ class Product {
   }
 }
 
-// const product = new Product("Book", 20);
-// console.log(product);
-// console.log(product.getPriceWithTax(0.2));
+// const p1 = new Product("Book", 19);
+// const p2 = new Product("Book 2", 29);
+
+function Autobind(_t: any, _2: string, descriptor: PropertyDescriptor) {
+  const originalMetod = descriptor.value;
+  const adjDescriptor: PropertyDescriptor = {
+    configurable: true,
+    enumerable: false,
+    get() {
+      const boundFn = originalMetod.bind(this);
+      return boundFn;
+    },
+  };
+  return adjDescriptor;
+}
+
+class Printer {
+  message = "This works!";
+  @Autobind
+  showMessage() {
+    console.log(this.message);
+  }
+}
+
+const p = new Printer();
+p.showMessage;
+const button3 = document.getElementById("first")!;
+button3.addEventListener("click", p.showMessage);
+
+interface ValidatorConfig {
+  [property: string]: {
+    [validatorble: string]: string[]; // ["required","positive"]
+  };
+}
+
+const registerdValidators: ValidatorConfig = {};
+
+function Required(target: any, propName: string) {
+  registerdValidators[target.constructor.name] = {
+    ...registerdValidators[target.constructor.name],
+    [propName]: ["required"],
+  };
+}
+function PositiveNumber(target: any, propName: string) {
+  registerdValidators[target.constructor.name] = {
+    ...registerdValidators[target.constructor.name],
+    [propName]: ["positive"],
+  };
+}
+let isValid = true;
+function validate(obj: any) {
+  const objValidatorConfig = registerdValidators[obj.constructor.name];
+  if (!objValidatorConfig) {
+    return true;
+  }
+  for (const prop in objValidatorConfig) {
+    for (const validator of objValidatorConfig[prop]) {
+      switch (validator) {
+        case "required":
+          isValid = isValid && !!obj[prop];
+          break;
+        case "positive":
+          isValid = isValid &&obj[prop] > 0;
+          break; 
+      }
+    }
+  }
+  return isValid;
+}
+
+class Course {
+  @Required
+  title: string;
+  @PositiveNumber
+  price: number;
+
+  constructor(t: string, p: number) {
+    this.title = t;
+    this.price = p;
+  }
+}
+
+const courseForm = document.querySelector("form")!;
+courseForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const titleEl = document.getElementById("title") as HTMLInputElement;
+  const priceEl = document.getElementById("price") as HTMLInputElement;
+  const title = titleEl.value;
+  const price = +priceEl.value;
+
+  const createdCourse = new Course(title, price);
+  if (!validate(createdCourse)) {
+    alert("Invalid input,please try again!");
+    return;
+  }
+  console.log(createdCourse);
+});
