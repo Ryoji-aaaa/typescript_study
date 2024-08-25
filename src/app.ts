@@ -1,28 +1,45 @@
-// import _ from "lodash";
-import { Product } from "./product.model";
-import { plainToInstance } from "class-transformer";
-import { validate } from "class-validator";
+import axios from "axios";
 
-const products = [
-  { title: "A Carpet", price: 2.99 },
-  { title: "A Book", price: 10.99 },
-];
+const form = document.querySelector("form")!;
+const addressInput = document.getElementById("address")! as HTMLInputElement;
+const GOOGLE_API_KEY = "AIzaSyBaEv3dHXqFhkfPRkYKwRCUka2wLK6G-yI";
 
-const loadedProduct = plainToInstance(Product, products);
-const newProd = new Product("", -5);
-validate(newProd).then(errors=>{
-    if(errors.length>0){
-        console.log("validation Errors!")
-        console.log(errors)
-    }else{
-        console.log(newProd.getInfomation());
-    }
-});
+// declare var google: any;
 
-for (const prod of loadedProduct) {
-  console.log(prod.getInfomation());
+type GoogleGeocodingResponse = {
+  results: { geometry: { location: { lat: number; lng: number } } }[];
+  status: "OK" | "ZERO_RESULTS";
+};
+
+function serchAddressHandler(event: Event) {
+  event.preventDefault();
+  const enterdAddress = addressInput.value;
+  axios
+    .get<GoogleGeocodingResponse>(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURI(
+        enterdAddress
+      )}&key=${GOOGLE_API_KEY}`
+    )
+    .then((response) => {
+      if (response.data.status !== "OK") {
+        throw new Error("Could not fech location");
+      }
+      const coordinates = response.data.results[0].geometry.location;
+      console.log(coordinates);
+      const map = new google.maps.Map(document.getElementById("map") as HTMLElement, {
+        center: coordinates,
+        zoom: 16,
+      });
+      new google.maps.Marker({
+        map: map,
+        position: coordinates,
+      });
+      console.log("marker :", google.maps.marker);
+    })
+    .catch((err) => {
+      alert(err.message);
+      console.log(err);
+    });
 }
-// const p1 = new Product("apple", 2);
-// const loadedProduct = products.map((prod) => {
-//   return new Product(prod.title, prod.price);
-// });
+
+form?.addEventListener("submit", serchAddressHandler);
